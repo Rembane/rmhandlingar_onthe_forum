@@ -1,10 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """Hej! :D
 
-main hämtar alla filer du ger som argument till programmet och lägger dem i Verksamhetsplan- och budget-forumet, medan main2 hämtar alla filer som du ger som argument till programmet och lägger dem i Inkomna motioner-forumet.
+main hämtar alla filer du ger som argument till programmet och lägger
+dem i Verksamhetsplan- och budget-forumet, medan main3 hämtar alla filer
+som du ger som argument till programmet och lägger dem i Inkomna motioner-forumet.
 
-Det går att skriva programmet mycket snyggare, men det lämnas som en övning till läsaren. Jag tar med glädje emot pull requests. :)
+Det går att skriva programmet mycket snyggare, men det lämnas som en övning till läsaren.
+Jag tar med glädje emot pull requests. :)
 
 Lycka till!
 """

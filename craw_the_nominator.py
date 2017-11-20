@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
-"""Det här programmet hämtar alla kandidater från valberedning.sverok.se som har tackat ja till minst en nominering och lägger upp dem på Sveroks forum.
+"""Det här programmet hämtar alla kandidater från valberedning.sverok.se
+som har tackat ja till minst en nominering och lägger upp dem på Sveroks forum.
 
-Den städar också HTMLen kraftigt, ty jag är perfektionist och koden som valberedning.sverok.se spottar ur sig är skräpig.
+Den städar också HTMLen kraftigt, ty jag är perfektionist och koden
+som valberedning.sverok.se spottar ur sig är skräpig.
 
-Det du behöver göra för att få det här programmet att fungera är att sätta rätt forumkod, rätt authkod och be forumgruppen om en api-nyckel.
+Det du behöver göra för att få det här programmet att fungera är att sätta rätt
+forumkod, rätt authkod och be forumgruppen om en api-nyckel.
 
 Lycka till!
 """
