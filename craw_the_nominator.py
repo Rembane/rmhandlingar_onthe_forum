@@ -20,17 +20,22 @@ def call_me_maybe(f, v):
     if v:
         f(v)
 
+def all_ids(soup):
+    """Hämta alla idn på nominerade som inte tackat nej.
+    """
+    for e in soup\
+            .find('div', class_='nominee-list')\
+            .find_all('div', class_='nominee-list-item'):
+        if 'turned-down' not in e['class']:
+            yield e.get('data-id')
+
 def main():
     double_newline_pattern = re.compile(r'\n[\s^\n]*\n')
     soup = BeautifulSoup(requests.get('https://valberedning.sverok.se').content, 'html.parser')
 
-    # Finn alla nominerade som inte tackat nej.
-    for id_ in [e.get('data-id') for e in soup.find('div', class_='nominee-list').find_all('div', class_='nominee-list-item ')]:
+    for id_ in all_ids(soup):
         url = 'https://valberedning.sverok.se/nominees/view/{}'.format(id_)
         nominee = BeautifulSoup(requests.get(url).content, 'html.parser').find('div', class_='nominee-view')
-
-        print(url)
-        print('==========================================================================')
 
         base = soup.new_tag('div')
         call_me_maybe(base.append, nominee.find('div', class_='nominees view fieldset'))
@@ -41,7 +46,10 @@ def main():
 
         base.find('div', id='galleri').extract()
 
-        for t in chain(base.find_all('br', style='clear:both;'), base.find_all(type='hidden'), base.find_all(style='display:none;'), base.find_all('hr'), base.find_all('img')):
+        for t in chain(base.find_all('br', style='clear:both;'), \
+                base.find_all(type='hidden'), \
+                base.find_all(style='display:none;'), \
+                base.find_all('hr'), base.find_all('img')):
             t.extract()
 
         for t in base.find_all(style=True):
@@ -92,8 +100,14 @@ def main():
             p.contents = t.contents
             t.replace_with(p)
 
-        for t in chain(base.find_all('div', class_='input select'), base.find_all('div', class_='limit-wrapper'), base.select('div.info')):
+        for t in chain(base.find_all('div', class_='input select'), \
+                base.find_all('div', class_='limit-wrapper'), \
+                base.select('div.info')):
             t.unwrap()
+
+        # Ta bort alla br-taggar, de gör att min pdf-output ful.
+        for t in base.find_all('br'):
+            t.extract()
 
         for t in base.find_all('p'):
             if t.string is not None:
@@ -120,16 +134,7 @@ def main():
         linkp.append(link_to_nominator)
         base.append(linkp)
 
-        response = requests.post('http://forum.sverok.se/api/index.php?/forums/topics',
-                                 auth=('MATA IN DIN AUTH-KOD HÄR.', ''),
-                                 data={
-                                     'forum' : 381,
-                                     'author' : 904,
-                                     'title' : name,
-                                     'post' : ''.join(map(str, base.contents)).strip(),
-                                     'hidden' : -1
-                                 }
-                                )
+        print(''.join(map(str, base.contents)).strip())
 
 if __name__ == '__main__':
     main()
