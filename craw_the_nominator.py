@@ -14,7 +14,7 @@ Lycka till!
 
 from bs4 import BeautifulSoup
 from itertools import chain
-import re, requests
+import re, requests, subprocess
 
 def call_me_maybe(f, v):
     if v:
@@ -29,112 +29,119 @@ def all_ids(soup):
         if 'turned-down' not in e['class']:
             yield e.get('data-id')
 
-def main():
-    double_newline_pattern = re.compile(r'\n[\s^\n]*\n')
+def clean_text(txt):
+    return ' '.join(x.strip() for x in txt.splitlines())
+
+def main2():
     soup = BeautifulSoup(requests.get('https://valberedning.sverok.se').content, 'html.parser')
 
     for id_ in all_ids(soup):
         url = 'https://valberedning.sverok.se/nominees/view/{}'.format(id_)
-        nominee = BeautifulSoup(requests.get(url).content, 'html.parser').find('div', class_='nominee-view')
+        soup = BeautifulSoup(requests.get(url).content, 'html.parser').find('div', class_='nominee-view')
 
-        base = soup.new_tag('div')
-        call_me_maybe(base.append, nominee.find('div', class_='nominees view fieldset'))
-        call_me_maybe(base.append, nominee.find('h3', class_='extra-margin'))
-        call_me_maybe(base.append, nominee.find('form'))
+        # Tidy städar HTML på ett fantastiskt vis.
+        p = subprocess.run(['tidy', '-iq', '--hide-comments', 'yes',
+            '--output-html', 'yes', '--bare', 'yes', '--clean', 'yes',
+            '--hide-comments', 'yes', '--show-warnings', 'no',
+            '--show-info', 'no', '--show-errors', '0'],\
+                input=str(soup).encode('utf-8'),
+                stdout=subprocess.PIPE,
+                )
 
-        name = base.find('h2').string.strip()
+        # Ny soppa.
+        soup = BeautifulSoup(p.stdout, 'html.parser')\
+                .find('div', class_='nominee-view')
 
-        base.find('div', id='galleri').extract()
-
-        for t in chain(base.find_all('br', style='clear:both;'), \
-                base.find_all(type='hidden'), \
-                base.find_all(style='display:none;'), \
-                base.find_all('hr'), base.find_all('img')):
-            t.extract()
-
-        for t in base.find_all(style=True):
-            del t['style']
-
-        for t in chain(base.find_all('div', class_='input radio'), base.find_all('div', class_='checkbox')):
-            for l in t.find_all('label'):
-                l.string = '\u00A0' + l.string.strip() # &nbsp;
-                if t['class'] != ['checkbox']:
-                    l.append(soup.new_tag('br'))
-                l.unwrap()
-
-        for t in base.find_all('label'):
-            t.unwrap()
-
-        colors = {'red' : '#F10000', 'green' : '#00D500'}
-        for t in chain(base.find_all(class_='green'), base.find_all(class_='red')):
-            c = colors[t['class'][0]]
-            del t['class']
-            t['style'] = 'color: {};'.format(c)
-
-        for t in base.find_all('form'):
-            t.unwrap()
-
-        for t in base.find_all('span', class_='question'):
-            if t.string is not None:
-                h4 = soup.new_tag('h4')
-                h4.string = t.string
-                t.replace_with(h4)
+        # Gör info-tabellen till en riktig tabell.
+        info = soup.find('div', class_='info')
+        name = info.h2.text
+        table = BeautifulSoup.new_tag(soup, name='table')
+        for lbl in info.find_all('label'):
+            row = BeautifulSoup.new_tag(soup, name='tr')
+            c1  = BeautifulSoup.new_tag(soup, name='td')
+            c2  = BeautifulSoup.new_tag(soup, name='td')
+            c1.string = lbl.text
+            s = lbl.find_next_sibling('span')
+            if s:
+                c2.string = clean_text(s.text)
             else:
-                t.extract()
+                c2.string = ''
+            row.append(c1)
+            row.append(c2)
+            table.append(row)
+        dl = BeautifulSoup.new_tag(soup, name='dl')
+        for li in info.find('ul', class_='nominations').find_all('li'):
+            [title, property] = [x.text for x in li.find_all('span', limit=2)]
+            dt = BeautifulSoup.new_tag(soup, name='dt')
+            dd = BeautifulSoup.new_tag(soup, name='dd')
+            dt.string = title
+            dd.string = property
+            dl.append(dt)
+            dl.append(dd)
+        info.clear()
+        header = BeautifulSoup.new_tag(soup, name='h1')
+        header.string = name
+        h2 = BeautifulSoup.new_tag(soup, name='h2')
+        h2.string = 'Nomineringar'
+        info.append(header)
+        info.append(table)
+        info.append(h2)
+        info.append(dl)
 
-        for t in base.find_all('span', attrs=False):
-            if not t.attrs:
-                t.unwrap()
+        lw = soup.find('div', class_='limit-wrapper')
+        if lw:
+            table = BeautifulSoup.new_tag(soup, name='table')
+            for t in soup.find_all('div', class_='checkbox'):
+                row = BeautifulSoup.new_tag(soup, name='tr')
+                c1  = BeautifulSoup.new_tag(soup, name='td')
+                c2  = BeautifulSoup.new_tag(soup, name='td')
+                c1.string = ''
+                if t.find('input').get('checked', False):
+                    c1.string = 'X'
+                c2.string = clean_text(t.find('label').text)
+                row.append(c1)
+                row.append(c2)
+                table.append(row)
+            lw.replace_with(table)
+        for t in soup.find_all('div', class_='input radio'):
+            table = BeautifulSoup.new_tag(soup, name='table')
+            for i in t.find_all('input'):
+                row = BeautifulSoup.new_tag(soup, name='tr')
+                c1  = BeautifulSoup.new_tag(soup, name='td')
+                c2  = BeautifulSoup.new_tag(soup, name='td')
+                c1.string = ''
+                if i.get('checked', False):
+                    c1.string = 'X'
+                c2.string = clean_text(i.next_sibling.text)
+                row.append(c1)
+                row.append(c2)
+                table.append(row)
+            t.replace_with(table)
 
-        for t in base.find_all('div', class_='presentation'):
-            t.unwrap()
+        # Uppa h3-taggarna en nivå
+        for t in soup.find_all('h3'):
+            t.name = 'h2'
+            del t['class']
 
-        for t in base.find_all('input'):
-            del t['id']
-            del t['value']
-            del t['name']
-            t['disabled'] = 'disabled'
+        # Byt ut span-question mot rubriker
+        for t in soup.find_all('span', class_='question'):
+            t.name = 'h3'
+            del t['class']
 
-        for t in base.find_all('div', class_='checkbox'):
-            p = soup.new_tag('p')
-            p.contents = t.contents
-            t.replace_with(p)
-
-        for t in chain(base.find_all('div', class_='input select'), \
-                base.find_all('div', class_='limit-wrapper'), \
-                base.select('div.info')):
-            t.unwrap()
-
-        # Ta bort alla br-taggar, de gör att min pdf-output ful.
-        for t in base.find_all('br'):
+        # Ta bort allt dumt
+        for t in chain(soup.find_all('br', class_='c4'), soup.find_all('hr'), soup.find_all('a', class_='button'), soup.find_all('div', class_='c5'), soup.find_all('script'), soup.find_all('div', class_='addthis_toolbox')):
             t.extract()
 
-        for t in base.find_all('p'):
-            if t.string is not None:
-                ps = double_newline_pattern.split(t.string)
-                if len(ps) > 1:
-                    t.contents = ''
-                    stuff = []
-                    for p in ps:
-                        p1 = soup.new_tag('p')
-                        p1.string = p
-                        stuff.append(p1)
+        # Ta bort alla taggar som inte behöver wrappa andra taggar
+        for t in chain(soup.find_all('form'), soup.find_all('div')):
+            t.unwrap()
 
-                    t.replace_with(stuff[0])
-                    for p2 in stuff[1:]:
-                        stuff[0].insert_after(p2)
+        img = soup.find('img').extract()
+        img['src'] = ''.join(('https://valberedning.sverok.se', img['src']))
+        soup.find('h1').insert_after(img)
 
-        base.find(class_='button send-message').extract()
-        base.find(class_='nominees view fieldset').unwrap()
-
-        link_to_nominator = soup.new_tag('a')
-        link_to_nominator['href'] = url
-        link_to_nominator.append('Länk till kandidatens sida på valberedning.sverok.se.')
-        linkp = soup.new_tag('p')
-        linkp.append(link_to_nominator)
-        base.append(linkp)
-
-        print(''.join(map(str, base.contents)).strip())
+        del soup['class']
+        print(soup.prettify(formatter='html'))
 
 if __name__ == '__main__':
-    main()
+    main2()
