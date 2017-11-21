@@ -85,10 +85,8 @@ def main2():
         header.string = name
         h2 = BeautifulSoup.new_tag(soup, name='h2')
         h2.string = 'Nomineringar'
-        info.append(header)
-        info.append(table1)
-        info.append(h2)
-        info.append(table2)
+        for x in (header, table1, h2, table2):
+            info.append(x)
 
         lw = soup.find('div', class_='limit-wrapper')
         if lw:
