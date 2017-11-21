@@ -55,7 +55,7 @@ def main2():
         # Gör info-tabellen till en riktig tabell.
         info = soup.find('div', class_='info')
         name = info.h2.text
-        table = BeautifulSoup.new_tag(soup, name='table')
+        table1 = BeautifulSoup.new_tag(soup, name='table')
         for lbl in info.find_all('label'):
             row = BeautifulSoup.new_tag(soup, name='tr')
             c1  = BeautifulSoup.new_tag(soup, name='td')
@@ -68,25 +68,27 @@ def main2():
                 c2.string = ''
             row.append(c1)
             row.append(c2)
-            table.append(row)
-        dl = BeautifulSoup.new_tag(soup, name='dl')
+            table1.append(row)
+        table2 = BeautifulSoup.new_tag(soup, name='table')
         for li in info.find('ul', class_='nominations').find_all('li'):
             [title, property] = [x.text for x in li.find_all('span', limit=2)]
-            dt = BeautifulSoup.new_tag(soup, name='dt')
-            dd = BeautifulSoup.new_tag(soup, name='dd')
-            dt.string = title
-            dd.string = property
-            dl.append(dt)
-            dl.append(dd)
+            row = BeautifulSoup.new_tag(soup, name='tr')
+            c1 = BeautifulSoup.new_tag(soup, name='td')
+            c2 = BeautifulSoup.new_tag(soup, name='td')
+            c1.string = title
+            c2.string = property
+            row.append(c1)
+            row.append(c2)
+            table2.append(row)
         info.clear()
         header = BeautifulSoup.new_tag(soup, name='h1')
         header.string = name
         h2 = BeautifulSoup.new_tag(soup, name='h2')
         h2.string = 'Nomineringar'
         info.append(header)
-        info.append(table)
+        info.append(table1)
         info.append(h2)
-        info.append(dl)
+        info.append(table2)
 
         lw = soup.find('div', class_='limit-wrapper')
         if lw:
