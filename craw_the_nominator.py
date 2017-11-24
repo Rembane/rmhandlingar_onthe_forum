@@ -92,9 +92,12 @@ def main():
         img = soup.find('img').extract()
         m = re.match(r'^/nominee_images/get_image/(\d+)', img['src'])
         if m:
-            nominee['imgsrc'] = img_url_template.format(m.group(1))
+            r = requests.get(img_url_template.format(m.group(1)))
+            fn = '{}.jpeg'.format(id_)
+            open(fn, 'wb').write(r.content)
+            nominee['imgsrc'] = fn
         else:
-            nominee['imgsrc'] = 'https://valberedning.sverok.se/img/useravatar.png'
+            nominee['imgsrc'] = 'useravatar.png'
 
         nominees.append(nominee)
 
