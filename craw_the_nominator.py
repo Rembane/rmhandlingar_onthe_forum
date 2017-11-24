@@ -46,7 +46,7 @@ def new_table_row(soup, *args):
         row.append(c)
     return row
 
-def main2():
+def main():
     img_url_template = 'https://valberedning.sverok.se/nominee_images/get_image/{}/400/400/true'
     for id_ in all_ids(BeautifulSoup(requests.get('https://valberedning.sverok.se').content, 'html.parser')):
         url = 'https://valberedning.sverok.se/nominees/view/{}'.format(id_)
@@ -129,4 +129,4 @@ def main2():
         print(soup.prettify(formatter='html'))
 
 if __name__ == '__main__':
-    main2()
+    main()
