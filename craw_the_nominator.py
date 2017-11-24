@@ -35,11 +35,11 @@ def clean_text(txt):
     else:
         return txt
 
-def true_or_empty(x, default):
-    if x:
-        return x
+def get_text(t):
+    if t:
+        return clean_text(t.text)
     else:
-        return default
+        return ''
 
 def new_table_row(soup, *args):
     row = BeautifulSoup.new_tag(soup, name='tr')
@@ -75,7 +75,7 @@ def main():
         info = soup.find('div', class_='info')
         nominee = {
                 'name' : clean_text(info.h2.text),
-                'info' : [(lbl.text, call_me_maybe(lambda x: x.text, lbl.find_next_sibling('span'))) for lbl in info.find_all('label')],
+                'info' : [(lbl.text, get_text(lbl.find_next_sibling('span'))) for lbl in info.find_all('label')],
                 'nominations' : [tuple(clean_text(x.text) for x in li.find_all('span', limit=2)) for li in info.find('ul', class_='nominations').find_all('li')],
                 'threeimportant' : [clean_text(t.find('label').text) for t in soup.find_all('div', class_='checkbox') if t.find('input').get('checked', False)],
                 'whatiam' : [[clean_text(i.next_sibling.text) for i in t.find_all('input') if i.get('checked', False)] for t in soup.find_all('div', class_='input radio')],
