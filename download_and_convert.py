@@ -1,24 +1,14 @@
 #!/usr/bin/env python
 
 """Det här programmet hämtar alla kandidater från valberedning.sverok.se
-som har tackat ja till minst en nominering och lägger upp dem på Sveroks forum.
-
-Den städar också HTMLen kraftigt, ty jag är perfektionist och koden
-som valberedning.sverok.se spottar ur sig är skräpig.
-
-Det du behöver göra för att få det här programmet att fungera är att sätta rätt
-forumkod, rätt authkod och be forumgruppen om en api-nyckel.
+som inte har tackat nej och konverterar den listan till en tex-fil.
 
 Lycka till!
 """
 
 from bs4 import BeautifulSoup
 from itertools import chain
-import json, re, requests, subprocess
-
-def call_me_maybe(f, v):
-    if v:
-        f(v)
+import json, re, requests, subprocess, sys
 
 def all_ids(soup):
     """Hämta alla idn på nominerade som inte tackat nej.
@@ -41,18 +31,7 @@ def get_text(t):
     else:
         return ''
 
-def new_table_row(soup, *args):
-    row = BeautifulSoup.new_tag(soup, name='tr')
-    for a in args:
-        c = BeautifulSoup.new_tag(soup, name='td')
-        if isinstance(a, str):
-            c.string = clean_text(a)
-        else:
-            c.append(a)
-        row.append(c)
-    return row
-
-def main():
+def scrape():
     img_url_template = 'https://valberedning.sverok.se/nominee_images/get_image/{}/400/400/true'
     nominees = []
     for id_ in all_ids(BeautifulSoup(requests.get('https://valberedning.sverok.se').content, 'html.parser')):
@@ -101,7 +80,69 @@ def main():
 
         nominees.append(nominee)
 
-    print(json.dumps(nominees))
+    return nominees
+
+def totex():
+    def table(spec, *rows):
+        return '\n'.join([
+            '\\begin{tabular}' + spec,
+            ' \\\\\n'.join(' & '.join(row) for row in rows),
+            '\\end{tabular}'])
+
+    def gfx(path):
+        return '\\begin{figure}[H]\n\\centering\n\\includegraphics[width=\\textwidth]{%s}\n\\end{figure}' % (path,)
+
+    def h1(s):
+        return '\\newpage\\section{%s}\n' % (s,)
+    def h2(s):
+        return '\\subsection{%s}\n' % (s,)
+    def h3(s):
+        return '\\subsubsection{%s}\n' % (s,)
+
+    print(open('head.tex').read())
+    for n in data:
+        print(h1(n['name']))
+        print(gfx(n['imgsrc']))
+        print(table('{ll}', *n['info']))
+        print(h2('Nomineringar'))
+        print(table('{ll}', *n['nominations']))
+        print(h2('Tre prioriterade'))
+        print(', '.join(n['threeimportant']))
+        print(h2('Korta frågor, snabba svar'))
+        print(', '.join(x[0] for x in n['whatiam']))
+        print(h2('Presentation'))
+        for q in n['questions']:
+            print(h3(q[0]))
+            for p in q[1]:
+                print(p)
+    print('\\end{document}')
+
+def topdf(s):
+    fn = 'alla_nominerade.tex'
+    with open(fn, 'w') as fh:
+        fh.write(s)
+    subprocess.run(['latexmk', '-shell-escape', '-pdf', fn])
+
+# In: Ja/Nej?
+# Ut: json, tex, pdf
+
+def main():
+    try:
+        a = sys.argv[1]
+    except IndexError:
+        pass
+    else:
+        if a == 'scrape':
+            print(json.dumps(scrape()))
+            sys.exit(0)
+        elif a == 'totex':
+            print(totex(json.loads(sys.stdin.read())))
+            sys.exit(0)
+        elif a == 'topdf':
+            topdf(totex(json.loads(sys.stdin.read())))
+            sys.exit(0)
+    print('Välj scrape eller totex eller topdf.')
+
 
 if __name__ == '__main__':
     main()
