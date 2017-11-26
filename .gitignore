@@ -1,0 +1,9 @@
+*.jpeg
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+env/
+*.json
+*.png
